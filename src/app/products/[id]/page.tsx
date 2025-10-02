@@ -2,74 +2,61 @@ import { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
+// NOTE: Use `any` for PageProps to satisfy Next.js 15+ types
 interface PageProps {
-  params: {
-    id: string;
-  };
-  searchParams?: URLSearchParams; // optional, kerak bo‘lsa ishlatiladi
+  params: any;
 }
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { id } = params;
-
-  const product = await fetch(`https://fakestoreapi.com/products/${id}`).then(
-    (res) => res.json()
-  );
+  const res = await fetch(`https://fakestoreapi.com/products/${id}`);
+  const product = await res.json();
 
   if (!product?.title) {
-    return {
-      title: "Product not found",
-      description: "No product available",
-    };
+    return { title: "Product not found", description: "No product available" };
   }
 
   return {
     title: product.title,
     description: product.description,
-    openGraph: {
-      images: [product.image],
-    },
+    openGraph: { images: [product.image] },
   };
 }
 
 const DetailProduct = async ({ params }: PageProps) => {
   const { id } = params;
 
-  const response = await fetch(`https://fakestoreapi.com/products/${id}`, {
+  const res = await fetch(`https://fakestoreapi.com/products/${id}`, {
     next: { revalidate: 60 },
   });
+  if (!res.ok) return notFound();
 
-  if (!response.ok) return notFound();
-
-  const data = await response.json();
+  const data = await res.json();
 
   return (
     <div className="max-w-5xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-8 bg-white rounded-2xl shadow-lg">
       <div className="flex items-center justify-center">
         <Image
-          src={data?.image}
-          alt={data?.title}
+          src={data.image}
+          alt={data.title}
           width={500}
           height={500}
-          className="rounded-lg shadow-md object-contain"
+          className="rounded-lg object-contain"
         />
       </div>
-
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">{data?.title}</h1>
-        <span className="inline-block px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-full w-fit">
-          {data?.category}
+        <h1 className="text-2xl font-bold">{data.title}</h1>
+        <span className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-full w-fit">
+          {data.category}
         </span>
-        <p className="text-gray-600">{data?.description}</p>
-
-        <div className="flex items-center gap-2 text-yellow-500 font-medium">
-          {data?.rating?.rate}{" "}
-          <span className="text-gray-500">({data?.rating?.count} reviews)</span>
+        <p>{data.description}</p>
+        <div className="flex items-center gap-2 text-yellow-500">
+          {data.rating?.rate}{" "}
+          <span className="text-gray-500">({data.rating?.count} reviews)</span>
         </div>
-
-        <strong className="text-2xl text-green-600">${data?.price}</strong>
+        <strong className="text-2xl text-green-600">${data.price}</strong>
       </div>
     </div>
   );
